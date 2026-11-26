@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* 디자인 가이드 2. 컬러 — 라이트 모드 고정 */
+@theme {
+  --color-bg: #ffffff;
+  --color-point: #3461f0;
+  --color-point-soft: #eef3ff;
+  --color-surface: #f5f7fa;
+  --color-title: #191f28;
+  --color-body: #4e5968;
+  --color-sub: #6b7684;
+  --color-line: #eef0f3;
+  --color-caution-bg: #fff8ec;
+  --color-caution: #7a4e0e;
+  --color-border-fill: #f0b95a;
+  --color-border-dot: #c98a1e;
+  --color-verified: #1e6b45;
+  --color-limited: #7a4e0e;
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+
+  --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-toast: toast 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes toast {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: #ffffff;
+  color: #191f28;
+}
+
+body {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
