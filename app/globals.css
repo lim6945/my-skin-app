@@ -43,6 +43,15 @@ body {
   color: #191f28;
 }
 
+/* 한글이 단어 중간("아토피피부 / 염")에서 끊기지 않게 합니다.
+   띄어쓰기 없는 긴 글자(링크 주소 등)는 넘치지 않도록 필요할 때만 끊습니다. */
+html,
+body,
+body * {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 body {
   font-family: var(--font-sans);
   letter-spacing: -0.01em;

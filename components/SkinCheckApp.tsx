@@ -106,17 +106,29 @@ export default function SkinCheckApp() {
     [gender, answers, concerns],
   );
 
-  /** 선택 후 0.3초 뒤 다음 화면으로 */
-  const advanceLater = useCallback(() => {
+  /**
+   * 빠르게 두 번 누르면 화면이 다시 그려지기 전에 두 번째 클릭이 들어와 문항을 건너뛸 수 있어서,
+   * state가 아니라 ref로 즉시 잠급니다. 잠겨 있으면 false를 돌려주고 응답을 무시합니다.
+   */
+  const lockRef = useRef(false);
+  const tryLock = useCallback(() => {
+    if (lockRef.current) return false;
+    lockRef.current = true;
     setLocked(true);
+    return true;
+  }, []);
+
+  /** 선택 후 0.3초 뒤 다음 화면으로 (tryLock()이 true일 때만 호출) */
+  const advanceLater = useCallback(() => {
     timer.current = setTimeout(() => {
       setStepIndex((i) => i + 1);
+      lockRef.current = false;
       setLocked(false);
     }, ADVANCE_DELAY_MS);
   }, []);
 
   const goBack = () => {
-    if (locked) return;
+    if (lockRef.current) return;
     if (stepIndex === 0) setScreen("home");
     else setStepIndex((i) => i - 1);
   };
@@ -128,6 +140,9 @@ export default function SkinCheckApp() {
   };
 
   const restart = () => {
+    if (timer.current) clearTimeout(timer.current);
+    lockRef.current = false;
+    setLocked(false);
     track("restart"); // 끝낸 시도의 attempt_no로 기록한 뒤
     nextAttempt(); // 다음 시도부터 attempt_no + 1
     setGender(null);
@@ -170,6 +185,7 @@ export default function SkinCheckApp() {
                   selected={gender === o.value}
                   disabled={locked}
                   onClick={() => {
+                    if (!tryLock()) return;
                     if (gender && gender !== o.value) {
                       // 경로가 바뀌면 경로별 문항 응답은 지웁니다.
                       setAnswers((prev) => {
@@ -194,6 +210,7 @@ export default function SkinCheckApp() {
             value={answers[step.question.id]}
             disabled={locked}
             onAnswer={(v) => {
+              if (!tryLock()) return;
               setAnswers((prev) => ({ ...prev, [step.question.id]: v }));
               track("answer", { step: step.question.id, value: String(v) });
               advanceLater();
@@ -225,6 +242,7 @@ export default function SkinCheckApp() {
                   selected={hasCondition === o.value}
                   disabled={locked}
                   onClick={() => {
+                    if (!tryLock()) return;
                     setHasCondition(o.value);
                     // H1 응답값은 기록하지 않고, 어느 문항까지 왔는지만 남깁니다.
                     track("answer", { step: CHECK_QUESTION.id });
@@ -316,7 +334,8 @@ function QuestionBlock({
   return (
     <>
       <h1 className="mt-2 text-[24px] font-bold leading-[1.45] tracking-[-0.03em] text-title">{question.text}</h1>
-      <div role="radiogroup" aria-label={question.text} className="mt-8">
+      {/* "해당 없어요"도 같은 선택지 묶음(radiogroup) 안에 둡니다. */}
+      <div role="radiogroup" aria-label={question.text} className="mt-8 flex flex-col">
         {SCALE.map((s) => (
           <ChoiceRow
             key={s.score}
@@ -326,12 +345,12 @@ function QuestionBlock({
             onClick={() => onAnswer(s.score)}
           />
         ))}
-      </div>
       {question.notApplicableLabel && (
         <button
           type="button"
           role="radio"
           aria-checked={value === NOT_APPLICABLE}
+          aria-label={question.notApplicableLabel}
           disabled={disabled}
           onClick={() => onAnswer(NOT_APPLICABLE)}
           className={`mt-6 self-center rounded-full px-4 py-2 text-[15px] outline-none focus-visible:ring-2 focus-visible:ring-point ${
@@ -341,6 +360,7 @@ function QuestionBlock({
           {question.notApplicableLabel}
         </button>
       )}
+      </div>
     </>
   );
 }
@@ -379,7 +399,6 @@ function ConcernBlock({
             role="checkbox"
             label={o.label}
             selected={selected.includes(o.value)}
-            disabled={full && !selected.includes(o.value) && o.value !== q.exclusiveValue}
             dimmed={full && !selected.includes(o.value) && o.value !== q.exclusiveValue}
             onClick={() => toggle(o.value)}
           />

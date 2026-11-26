@@ -27,7 +27,12 @@ export function SecondaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElem
   );
 }
 
-/** 전체 폭 선택지 행 (높이 58px, 오른쪽 22px 라디오/체크 원) */
+/**
+ * 전체 폭 선택지 행 (높이 58px)
+ * - role="radio": 오른쪽 22px 동그라미 (하나만 고르는 문항)
+ * - role="checkbox": 오른쪽 22px 네모 체크박스 (여러 개 고르는 문항)
+ * 선택지 글자가 그대로 화면 읽기 프로그램용 이름(aria-label)이 됩니다.
+ */
 export function ChoiceRow({
   label,
   selected,
@@ -49,6 +54,8 @@ export function ChoiceRow({
       type="button"
       role={role}
       aria-checked={selected}
+      aria-label={label}
+      aria-disabled={dimmed || undefined}
       onClick={onClick}
       disabled={disabled}
       className={`flex min-h-[58px] w-full items-center justify-between gap-4 border-b border-line py-3 text-left text-[17px] ${dimmed ? "" : "text-title"} ${focusRing} focus-visible:ring-offset-0 rounded-md ${
@@ -58,14 +65,16 @@ export function ChoiceRow({
       <span>{label}</span>
       <span
         aria-hidden
-        className={`flex size-[22px] shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+        className={`flex size-[22px] shrink-0 items-center justify-center border-2 transition-colors ${
+          role === "checkbox" ? "rounded-[6px]" : "rounded-full"
+        } ${
           selected ? "border-point bg-point" : "border-[#D1D6DB] bg-white"
         }`}
       >
         {selected && (
           role === "checkbox" ? (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2.5 6.2 5 8.5l4.5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 6.2 5 8.5l4.5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           ) : (
             <span className="size-2 rounded-full bg-white" />

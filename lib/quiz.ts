@@ -98,7 +98,9 @@ export function axisRatio(questions: Question[], answers: Answers, axis: Axis): 
     got += a;
     max += MAX_SCORE_PER_QUESTION;
   }
-  return max === 0 ? 0 : got / max;
+  if (max === 0) return 0;
+  // 0.1 + 0.2 = 0.30000000000000004 같은 소수 오차로 기준값 경계에서 판정이 바뀌지 않도록 반올림합니다.
+  return Math.round((got / max) * 1e6) / 1e6;
 }
 
 export interface AxisResult {
@@ -275,7 +277,11 @@ export function buildResult(input: {
     oilType === "combination"
       ? tHigh ? SUMMARY.oil.combinationTzone : SUMMARY.oil.combinationCheek
       : SUMMARY.oil[oilType];
-  const summary = [oilSummary, SUMMARY.moisture[moistureLevel], SUMMARY.sensitivity[sensitivityLevel]].join(" ");
+  // 수분이 경계면 "충분/부족"으로 단정하지 않는 문장을 씁니다.
+  const moistureSummary = moisture.isBorder
+    ? moisture.leansHigh ? SUMMARY.moisture.borderLacking : SUMMARY.moisture.borderEnough
+    : SUMMARY.moisture[moistureLevel];
+  const summary = [oilSummary, moistureSummary, SUMMARY.sensitivity[sensitivityLevel]].join(" ");
 
   const axes = [tzone, cheek, moisture, sens.result];
   const borderAxes = axes.filter((a) => a.isBorder);

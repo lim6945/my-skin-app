@@ -179,6 +179,7 @@ export default function ResultView({
                   type="button"
                   role="radio"
                   aria-checked={selected}
+                  aria-label={o.label}
                   onClick={() => {
                     setFeedback(o.value);
                     track("feedback", { value: o.value });
