@@ -408,7 +408,7 @@ export const EVIDENCE: Record<string, Evidence> = {
     moreSources: [{ source: "J Dermatolog Treat 2002", url: "https://pubmed.ncbi.nlm.nih.gov/19753737/" }],
   },
   sodiumHyaluronate: {
-    text: "히알루론산 세럼을 6주 바른 연구에서 피부 수분이 늘었어요. 다만 비교군이 없고 제조사가 지원한 연구라 근거는 제한적이에요.",
+    text: "히알루론산 세럼을 6주 바른 연구에서 피부 수분이 늘었어요.",
     source: "Dermatol Ther 2021",
     url: "https://link.springer.com/article/10.1007/s13555-021-00566-0",
   },
