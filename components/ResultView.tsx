@@ -276,30 +276,31 @@ function IngredientCard({
       {open && (
         <div id={panelId} className="px-[18px] pb-[18px] pl-[58px]">
           <div className={`rounded-xl px-4 py-4 ${first ? "bg-surface" : "bg-white"}`}>
-            <ul className="flex flex-col gap-2">
-              {ingredient.claims.map((c) => (
-                <li key={`${c.ruleId}-${c.reason}`} className="text-[14px] leading-[1.6] text-body">
-                  <span
-                    className={`mr-1.5 font-semibold ${c.level === "verified" ? "text-verified" : "text-limited"}`}
-                  >
-                    {c.levelLabel}
-                  </span>
-                  <span className="text-title">
-                    {c.ruleLabel} — {c.reason}
-                  </span>
-                  {c.level === "limited" && (
-                    <span className="mt-0.5 block text-[13px] text-sub">{c.levelDescription}</span>
-                  )}
-                </li>
+            {/* 설명별 근거 수준 → 근거 문장 → 출처. 같은 근거를 쓰는 설명은 한 묶음으로 */}
+            <div className="flex flex-col divide-y divide-line">
+              {ingredient.evidenceGroups.map((g, gi) => (
+                <div key={gi} className={gi === 0 ? "pb-3 last:pb-0" : "py-3 last:pb-0"}>
+                  <ul className="flex flex-col gap-1.5">
+                    {g.claims.map((c) => (
+                      <li key={`${c.ruleId}-${c.reason}`} className="text-[14px] leading-[1.6] text-body">
+                        <span
+                          className={`mr-1.5 font-semibold ${c.level === "verified" ? "text-verified" : "text-limited"}`}
+                        >
+                          {c.levelLabel}
+                        </span>
+                        <span className="text-title">
+                          {c.ruleLabel} — {c.reason}
+                        </span>
+                        {c.level === "limited" && (
+                          <span className="mt-0.5 block text-[13px] text-sub">{c.levelDescription}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {g.evidence && <EvidenceBlock evidence={g.evidence} ingredientName={ingredient.name} />}
+                </div>
               ))}
-            </ul>
-            {ingredient.evidences.length > 0 && (
-              <div className="mt-3 flex flex-col gap-3 border-t border-line pt-3">
-                {ingredient.evidences.map((e) => (
-                  <EvidenceBlock key={e.text} evidence={e} ingredientName={ingredient.name} />
-                ))}
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -309,28 +310,34 @@ function IngredientCard({
 
 function EvidenceBlock({ evidence, ingredientName }: { evidence: Evidence; ingredientName: string }) {
   const t = TEXT.result;
+  const sources = [{ source: evidence.source, url: evidence.url }, ...(evidence.moreSources ?? [])];
   return (
-    <div>
+    <div className="mt-2 rounded-lg">
       <p className="text-[14px] leading-[1.6] text-body">{evidence.text}</p>
-      {evidence.url ? (
-        <a
-          href={evidence.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => track("source_click", { value: ingredientName })}
-          className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-point underline-offset-4 hover:underline focus-visible:underline outline-none"
-        >
-          {t.sourceLink} · {evidence.source}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span className="sr-only">(새 창)</span>
-        </a>
-      ) : (
-        <p className="mt-1 text-[13px] text-sub">
-          {t.sourceLabel} · {evidence.source}
-        </p>
-      )}
+      <div className="mt-1 flex flex-col items-start gap-0.5">
+        {sources.map((s) =>
+          s.url ? (
+            <a
+              key={s.source}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track("source_click", { value: ingredientName })}
+              className="inline-flex items-center gap-1 text-[13px] font-semibold text-point underline-offset-4 hover:underline focus-visible:underline outline-none"
+            >
+              {t.sourceLink} · {s.source}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="sr-only">(새 창)</span>
+            </a>
+          ) : (
+            <p key={s.source} className="text-[13px] text-sub">
+              {t.sourceLabel} · {s.source}
+            </p>
+          ),
+        )}
+      </div>
     </div>
   );
 }

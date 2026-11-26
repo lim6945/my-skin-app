@@ -353,11 +353,16 @@ export const EVIDENCE_LEVEL_DISPLAY: Record<"verified" | "limited", { label: str
 
 /* ─────────────── 8. 근거 문장 · 출처 ─────────────── */
 
-export interface Evidence {
-  text: string;
+export interface EvidenceSource {
   source: string;
   /** 링크가 없으면 출처 이름만 보여줍니다. */
   url?: string;
+}
+
+export interface Evidence extends EvidenceSource {
+  text: string;
+  /** 출처가 두 개 이상이면 나머지를 여기에 적습니다. */
+  moreSources?: EvidenceSource[];
 }
 
 export const EVIDENCE: Record<string, Evidence> = {
@@ -390,6 +395,22 @@ export const EVIDENCE: Record<string, Evidence> = {
     text: "식약처 주름개선 기능성 고시 성분이에요.",
     source: "식약처 고시",
     url: "https://www.mfds.go.kr/brd/m_207/view.do?seq=15120",
+  },
+  ceramideNP: {
+    text: "세라마이드가 든 보습제를 4주간 바른 무작위·이중맹검 연구에서 피부 수분이 늘고 수분 손실이 줄었어요. 다만 세라마이드만 따로 시험한 건 아니에요.",
+    source: "Dermatol Ther 2019",
+    url: "https://pubmed.ncbi.nlm.nih.gov/31585489/",
+  },
+  panthenol: {
+    text: "판테놀(덱스판테놀)은 피부 각질층 수분을 높이고 수분 손실을 줄이는 보습 성분으로 정리돼 있어요. 자극받은 피부에서 성분이 없는 크림보다 장벽 회복이 빨랐다는 연구도 있어요.",
+    source: "Am J Clin Dermatol 2002",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12113650/",
+    moreSources: [{ source: "J Dermatolog Treat 2002", url: "https://pubmed.ncbi.nlm.nih.gov/19753737/" }],
+  },
+  sodiumHyaluronate: {
+    text: "히알루론산 세럼을 6주 바른 연구에서 피부 수분이 늘었어요. 다만 비교군이 없고 제조사가 지원한 연구라 근거는 제한적이에요.",
+    source: "Dermatol Ther 2021",
+    url: "https://link.springer.com/article/10.1007/s13555-021-00566-0",
   },
   aha: {
     text: "4주 사용 후 자외선에 의한 붉어짐 민감도가 18% 높아졌다는 연구가 있어요 (사용을 멈추면 회복).",
@@ -459,6 +480,8 @@ export interface RuleItem {
   /** 근거 수준은 "성분 + 이 설명" 한 쌍에 붙습니다. */
   level: EvidenceLevel;
   evidence?: keyof typeof EVIDENCE;
+  /** limited일 때 펼친 영역에 보여줄 "연구 적음"의 이유. 없으면 기본 설명을 씁니다. */
+  levelNote?: string;
 }
 
 export interface Caution {
@@ -520,8 +543,9 @@ export const RULES: Rule[] = [
     label: "유분이 적은 피부",
     when: { type: "oil", value: "low_oil" },
     items: [
+      { ingredient: "ceramideNP", reason: "수분 유지·장벽에 도움을 줄 수 있어요", level: "verified", evidence: "ceramideNP" },
+      // 단독 성분 연구를 찾지 못해 노출하지 않음 (2026-11-26 리서치)
       { ingredient: "squalane", reason: "유분 보충에 도움을 줄 수 있어요", level: "unchecked" },
-      { ingredient: "ceramideNP", reason: "유분 보충에 도움을 줄 수 있어요", level: "unchecked" },
       { ingredient: "sheaButter", reason: "유분 보충에 도움을 줄 수 있어요", level: "unchecked" },
     ],
     cautions: [{ text: "에탄올이 많은 제품은 바른 뒤 건조감이 없는지 확인해 주세요." }],
@@ -533,8 +557,14 @@ export const RULES: Rule[] = [
     when: { type: "moisture", value: "lacking" },
     items: [
       { ingredient: "glycerin", reason: "수분 유지에 도움을 줄 수 있어요", level: "verified", evidence: "glycerin" },
-      { ingredient: "sodiumHyaluronate", reason: "보습에 도움을 줄 수 있어요", level: "unchecked" },
-      { ingredient: "panthenol", reason: "보습에 도움을 줄 수 있어요", level: "unchecked" },
+      { ingredient: "panthenol", reason: "보습·장벽에 도움을 줄 수 있어요", level: "verified", evidence: "panthenol" },
+      {
+        ingredient: "sodiumHyaluronate",
+        reason: "보습에 도움을 줄 수 있다는 연구가 있어요",
+        level: "limited",
+        evidence: "sodiumHyaluronate",
+        levelNote: "비교군이 없고 제조사가 지원한 연구라 근거가 약해요.",
+      },
     ],
     cautions: [
       { text: "냉난방이 켜진 곳에서는 수시로 덧발라 주세요." },
@@ -585,7 +615,17 @@ export const RULES: Rule[] = [
     group: "shaving",
     label: "면도 후 피부",
     when: { type: "shaving" },
-    items: [{ ingredient: "allantoin", reason: "면도 후 자극 관리에 도움을 줄 수 있어요", level: "unchecked" }],
+    items: [
+      {
+        ingredient: "panthenol",
+        reason: "자극받은 피부의 장벽 회복에 도움을 줄 수 있다는 연구가 있어요",
+        level: "limited",
+        evidence: "panthenol",
+        levelNote: "면도가 아닌 실험적 자극 연구라 면도에 그대로 적용하기엔 한계가 있어요.",
+      },
+      // 보습·자극 완화 근거가 부족하다는 리뷰가 있어 노출하지 않음 (2026-11-26 리서치)
+      { ingredient: "allantoin", reason: "면도 후 자극 관리에 도움을 줄 수 있어요", level: "unchecked" },
+    ],
     cautions: [
       {
         text: "면도 직후에는 AHA·BHA·레티놀 제품과 향이 강한 애프터셰이브를 피해 주세요.",
@@ -623,7 +663,7 @@ export const RULES: Rule[] = [
     when: { type: "concern", value: "dryness" },
     items: [
       { ingredient: "glycerin", reason: "수분 유지에 도움을 줄 수 있어요", level: "verified", evidence: "glycerin" },
-      { ingredient: "ceramideNP", reason: "장벽 보습에 도움을 줄 수 있어요", level: "unchecked" },
+      { ingredient: "ceramideNP", reason: "수분 유지·장벽에 도움을 줄 수 있어요", level: "verified", evidence: "ceramideNP" },
     ],
     cautions: [
       {

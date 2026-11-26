@@ -180,7 +180,15 @@ export interface Claim {
   reason: string;
   level: "verified" | "limited";
   levelLabel: string;
+  /** "연구 적음"의 이유 (data.ts의 levelNote, 없으면 기본 설명) */
   levelDescription: string;
+  evidenceId?: string;
+}
+
+/** 펼친 영역: 같은 근거 문장을 쓰는 설명끼리 묶어, 설명별 근거 수준 → 근거 문장 → 출처 순으로 보여줍니다. */
+export interface EvidenceGroup {
+  claims: Claim[];
+  evidence?: Evidence;
 }
 
 export interface IngredientResult {
@@ -193,7 +201,7 @@ export interface IngredientResult {
   /** 예민한 피부 + AHA·BHA·레티놀일 때 붙는 표시 */
   testTag?: string;
   claims: Claim[];
-  evidences: Evidence[];
+  evidenceGroups: EvidenceGroup[];
 }
 
 export interface CautionResult {
@@ -298,12 +306,15 @@ export function buildResult(input: {
   const ctx: MatchContext = { gender: input.gender, answers, concerns, oilType, moistureLevel, sensitivityLevel };
   const matched: Rule[] = RULES.filter((r) => matches(r.when, ctx));
 
-  const claimMap = new Map<string, { rule: Rule; reason: string; level: "verified" | "limited"; evidence?: string }[]>();
+  const claimMap = new Map<
+    string,
+    { rule: Rule; reason: string; level: "verified" | "limited"; evidence?: string; levelNote?: string }[]
+  >();
   for (const rule of matched) {
     for (const item of rule.items) {
       if (item.level === "unchecked") continue; // 확인하지 않은 설명은 보여주지 않음
       const list = claimMap.get(item.ingredient) ?? [];
-      list.push({ rule, reason: item.reason, level: item.level, evidence: item.evidence });
+      list.push({ rule, reason: item.reason, level: item.level, evidence: item.evidence, levelNote: item.levelNote });
       claimMap.set(item.ingredient, list);
     }
   }
@@ -317,7 +328,6 @@ export function buildResult(input: {
       const labels = [...new Set(raw.map((c) => c.rule.label))];
       const reason =
         labels.length > 1 ? `${joinWithAnd(labels)}에 함께 맞아요` : raw[0].reason;
-      const evidenceIds = [...new Set(raw.map((c) => c.evidence).filter((e): e is string => !!e))];
       const claims: Claim[] = [];
       const seen = new Set<string>();
       for (const c of raw) {
@@ -331,8 +341,22 @@ export function buildResult(input: {
           reason: c.reason,
           level: c.level,
           levelLabel: EVIDENCE_LEVEL_DISPLAY[c.level].label,
-          levelDescription: EVIDENCE_LEVEL_DISPLAY[c.level].description,
+          levelDescription: c.levelNote ?? EVIDENCE_LEVEL_DISPLAY[c.level].description,
+          evidenceId: c.evidence,
         });
+      }
+      // 같은 근거 문장을 쓰는 설명끼리 묶기 (처음 나온 순서 유지)
+      const evidenceGroups: EvidenceGroup[] = [];
+      const groupIndex = new Map<string, number>();
+      for (const claim of claims) {
+        const key = claim.evidenceId ?? `__none_${claim.ruleId}_${claim.reason}`;
+        const idx = groupIndex.get(key);
+        if (idx !== undefined) {
+          evidenceGroups[idx].claims.push(claim);
+        } else {
+          groupIndex.set(key, evidenceGroups.length);
+          evidenceGroups.push({ claims: [claim], evidence: claim.evidenceId ? EVIDENCE[claim.evidenceId] : undefined });
+        }
       }
       return {
         id,
@@ -342,7 +366,7 @@ export function buildResult(input: {
         note: ing.note,
         testTag: isSensitive && ing.active ? TEXT.result.activeTestTag : undefined,
         claims,
-        evidences: evidenceIds.map((e) => EVIDENCE[e]).filter(Boolean),
+        evidenceGroups,
       };
     })
     .sort((a, b) => {
